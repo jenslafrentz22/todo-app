@@ -4,11 +4,13 @@ const todoInput = document.querySelector("#todo-input");
 const todoList = document.querySelector("#todo-list");
 const radioContainer = document.querySelector("#radio-container");
 
+// #########################################################
 // STATE erzeugen: id: ..., todo: todoInput.value, done: false
 const state = {
   todos: [],
 };
 
+// #########################################################
 // ADD TODOS
 function addTodo() {
   const newTodoText = todoInput.value;
@@ -41,13 +43,15 @@ function addTodo() {
     todo: `${newTodoText}`,
     done: "false",
   });
-  const todosAsString = JSON.stringify(state.todos);
-  localStorage.setItem("todos", todosAsString); // `${todoID}`
+  const addTodosAsString = JSON.stringify(state.todos);
+  localStorage.setItem("todos", addTodosAsString); // `${todoID}`
   // ############# LOCAL STORAGE END #######################
 }
 addButton.addEventListener("click", addTodo);
+// ### ADD ENDE ############################################
 
-// STATE (aus LocalStorage) FÜLLEN
+// #########################################################
+// ### UPDATE STATE (aus LocalStorage) #####################
 function loadDataFromLocalStorage() {
   if (localStorage.getItem("todos")) {
     const todosData = JSON.parse(localStorage.getItem("todos"));
@@ -57,31 +61,30 @@ function loadDataFromLocalStorage() {
   }
 }
 state.todos = loadDataFromLocalStorage();
-console.log("HIER: ", state.todos);
+console.log("GET: ", state.todos);
 
-// localStorage.clear();
-// CHECKED (line-through / done)
-
-if (state.todos.length > 0) {
-  for (let k = state.todos.length; k >= 0; k--) {
-    const getIt = localStorage.getItem("todos");
-    console.log("Eintrag: ", getIt);
-  }
-}
-
+// #########################################################
+// ### UPDATE DONE #########################################
 function isChecked(e) {
-  if (e.target.checked) {
-    e.target.parentElement.style.textDecoration = "line-through";
-  } else {
-    e.target.parentElement.style.textDecoration = "none";
+  for (let datauch of state.todos) {
+    const updateTodosAsString = JSON.stringify(state.todos);
+    let datisit = e.target.parentElement.innerText;
+    if (e.target.checked) {
+      e.target.parentElement.style.textDecoration = "line-through";
+      if (datisit === datauch.todo) {
+        datauch.done = "true";
+      }
+    } else {
+      e.target.parentElement.style.textDecoration = "none";
+      datauch.done = "false";
+    }
+    localStorage.setItem("todos", updateTodosAsString);
   }
 }
 todoList.addEventListener("change", isChecked);
 
 // REMOVE DONE TODOS
 function removeDoneTodos() {
-  // localStorage.getItem("eintrag:");
-
   const children = todoList.children;
   const length = children.length - 1;
 
@@ -97,7 +100,6 @@ function removeDoneTodos() {
 deleteButton.addEventListener("click", removeDoneTodos);
 
 // #####################################################
-
 // FILTER
 function filterTodos(e) {
   switch (e.target.value) {
@@ -113,41 +115,60 @@ function filterTodos(e) {
   }
 }
 radioContainer.addEventListener("change", filterTodos);
+
 // Filter - ALL
 function showAllTodos() {
-  for (let li of todoList.children) {
-    // li.hidden;
-    li.style.visibility = "visible";
+  todoList.innerHTML = "";
+  for (let openTodo of state.todos) {
+    filterlist(openTodo.todo, openTodo.done);
   }
 }
+
+// FILTER-LISTE bauen
+function filterlist(value, done) {
+  const TodoText = value;
+
+  // Elemente holen
+  const newTodoLi = document.createElement("li");
+  const checkBox = document.createElement("input");
+  const cboxLabel = document.createElement("label");
+
+  // li stylen
+  newTodoLi.setAttribute("class", "todo-item");
+  if (done === "true") {
+    newTodoLi.style.textDecoration = "line-through";
+  }
+  // checkbox stylen
+  checkBox.type = "checkbox";
+  checkBox.setAttribute("type", "checkbox");
+  checkBox.setAttribute("class", "todo-item__checkbox");
+  // label stylen
+  cboxLabel.setAttribute("class", "todo-item__text");
+
+  // zusammenbauen:
+  newTodoLi.appendChild(checkBox);
+  cboxLabel.innerText = TodoText;
+  newTodoLi.appendChild(cboxLabel);
+  todoList.appendChild(newTodoLi);
+  return;
+}
+
 // Filter - OPEN
 function showOpenTodos() {
-  for (let li of todoList.children) {
-    const checkbox = li.querySelector('input[type="checkbox"]');
-    const isChecked = checkbox.checked;
-    if (isChecked) {
-      // li.setAttribute("hidden", "true");
-      // li.hidden = true;
-      li.style.visibility = "hidden";
-    } else {
-      li.style.visibility = "visible";
-      // li.hidden = false;
-      // li.setAttribute("hidden", "false");
+  todoList.innerHTML = "";
+  for (let openTodo of state.todos) {
+    if (openTodo.done === "false") {
+      filterlist(openTodo.todo, openTodo.done);
     }
   }
 }
 // Filter - DONE
 function showDoneTodos() {
-  console.log("DONE");
-  for (let li of todoList.children) {
-    const checkbox = li.querySelector('input[type="checkbox"]');
-    const isChecked = checkbox.checked;
-    if (isChecked) {
-      // li.hidden = false;
-      li.style.visibility = "visible";
-    } else {
-      // li.hidden = true;
-      li.style.visibility = "hidden";
+  todoList.innerHTML = "";
+  for (let openTodo of state.todos) {
+    if (openTodo.done === "true") {
+      filterlist(openTodo.todo, openTodo.done);
     }
   }
 }
+// localStorage.clear();
