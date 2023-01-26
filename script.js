@@ -85,15 +85,14 @@ todoList.addEventListener("change", isChecked);
 
 // REMOVE DONE TODOS
 function removeDoneTodos() {
-  const children = todoList.children;
-  const length = children.length - 1;
-
-  for (let i = length; i >= 0; i--) {
-    const li = children[i];
-    const checkbox = li.querySelector('input[type="checkbox"]');
-
-    if (checkbox.checked) {
-      li.remove();
+  todoList.innerHTML = "";
+  for (let openTodo of state.todos) {
+    if (openTodo.done === "true") {
+      // console.log(openTodo) -> splice(x, y)
+      // 1. aus state löschen
+      // 2. neu in localStorage setzen
+    } else {
+      filterlist(openTodo.todo, "false");
     }
   }
 }
