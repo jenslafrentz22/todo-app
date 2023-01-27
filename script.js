@@ -10,8 +10,21 @@ const state = {
   todos: [],
 };
 
+// State rendern
+function render() {
+  showAllTodos();
+}
+// document.body.onload.render;
+
 // #########################################################
 // ADD TODOS
+function addTodoOnEnter(e) {
+  if (e.key.toLowerCase() === "enter") {
+    addTodo();
+  }
+}
+todoInput.addEventListener("keypress", addTodoOnEnter);
+
 function addTodo() {
   const newTodoText = todoInput.value;
   todoInput.value = "";
@@ -66,35 +79,57 @@ console.log("GET: ", state.todos);
 // #########################################################
 // ### UPDATE DONE #########################################
 function isChecked(e) {
-  for (let datauch of state.todos) {
-    const updateTodosAsString = JSON.stringify(state.todos);
-    let datisit = e.target.parentElement.innerText;
-    if (e.target.checked) {
-      e.target.parentElement.style.textDecoration = "line-through";
+  // li innertext
+  let datisit = e.target.parentElement.innerText;
+  let updateTodosAsString = JSON.stringify(state.todos);
+  if (e.target.checked) {
+    e.target.parentElement.style.textDecoration = "line-through";
+    // state update
+    for (let datauch of state.todos) {
       if (datisit === datauch.todo) {
         datauch.done = "true";
+        updateTodosAsString = JSON.stringify(state.todos);
       }
-    } else {
-      e.target.parentElement.style.textDecoration = "none";
-      datauch.done = "false";
     }
-    localStorage.setItem("todos", updateTodosAsString);
+  } else {
+    e.target.parentElement.style.textDecoration = "none";
+    // state update
+    for (let datauch of state.todos) {
+      if (datisit === datauch.todo) {
+        datauch.done = "false";
+        updateTodosAsString = JSON.stringify(state.todos);
+      }
+    }
   }
+  localStorage.clear();
+  localStorage.setItem("todos", updateTodosAsString);
 }
 todoList.addEventListener("change", isChecked);
 
 // REMOVE DONE TODOS
 function removeDoneTodos() {
-  todoList.innerHTML = "";
-  for (let openTodo of state.todos) {
-    if (openTodo.done === "true") {
-      // console.log(openTodo) -> splice(x, y)
-      // 1. aus state löschen
-      // 2. neu in localStorage setzen
-    } else {
-      filterlist(openTodo.todo, "false");
+  // li display none
+  // document.querySelector("#todo-list").innerHTML = "";
+  const children = todoList.children;
+  const length = children.length - 1;
+  for (let i = length; i >= 0; i--) {
+    const li = children[i];
+    const checkbox = li.querySelector('input[type="checkbox"]');
+    const isChecked = checkbox.checked;
+    if (isChecked === true) {
+      li.remove();
     }
   }
+  // state done todo löschen
+  let deletedTodosString = JSON.stringify(state.todos);
+  for (let i = state.todos.length - 1; i >= 0; i--) {
+    if (state.todos[i].done === "true") {
+      state.todos.splice(i, 1);
+    }
+  }
+  deletedTodosString = JSON.stringify(state.todos);
+  localStorage.clear();
+  localStorage.setItem("todos", deletedTodosString);
 }
 deleteButton.addEventListener("click", removeDoneTodos);
 
@@ -136,6 +171,7 @@ function filterlist(value, done) {
   newTodoLi.setAttribute("class", "todo-item");
   if (done === "true") {
     newTodoLi.style.textDecoration = "line-through";
+    checkBox.checked = "true";
   }
   // checkbox stylen
   checkBox.type = "checkbox";
@@ -170,4 +206,3 @@ function showDoneTodos() {
     }
   }
 }
-// localStorage.clear();
