@@ -4,31 +4,16 @@ const todoInput = document.querySelector("#todo-input");
 const todoList = document.querySelector("#todo-list");
 const radioContainer = document.querySelector("#radio-container");
 
-// #########################################################
-// STATE erzeugen: id: ..., todo: todoInput.value, done: false
-const state = {
-  todos: [],
-};
+// ### FETCH - ADRESSE ###
+const fetchAdress = "http://localhost:4730/todos";
 
-// State rendern
+// State beim Seitenstart rendern
 function render() {
   showAllTodos();
 }
-// document.body.onload.render;
 
-// #########################################################
-// ADD TODOS
-function addTodoOnEnter(e) {
-  if (e.key.toLowerCase() === "enter") {
-    addTodo();
-  }
-}
-todoInput.addEventListener("keypress", addTodoOnEnter);
-
-function addTodo() {
-  const newTodoText = todoInput.value;
-  todoInput.value = "";
-
+// ### TODO-TEMPLATE ###
+function todoTemplate(descText, isDone) {
   // Elemente holen
   const newTodoLi = document.createElement("li");
   const checkBox = document.createElement("input");
@@ -36,6 +21,10 @@ function addTodo() {
 
   // li stylen
   newTodoLi.setAttribute("class", "todo-item");
+  if (isDone === true) {
+    newTodoLi.style.textDecoration = "line-through";
+    checkBox.checked = "true";
+  }
   // checkbox stylen
   checkBox.type = "checkbox";
   checkBox.setAttribute("type", "checkbox");
@@ -45,96 +34,133 @@ function addTodo() {
 
   // zusammenbauen:
   newTodoLi.appendChild(checkBox);
-  cboxLabel.innerText = newTodoText;
+  cboxLabel.innerText = descText;
   newTodoLi.appendChild(cboxLabel);
   todoList.appendChild(newTodoLi);
+  console.log(todoList);
+}
 
-  // ############# ADD in LOCAL STORAGE #######################
-  let todoID = +new Date();
-  state.todos.push({
-    id: todoID,
-    todo: `${newTodoText}`,
-    done: "false",
-  });
-  const addTodosAsString = JSON.stringify(state.todos);
-  localStorage.setItem("todos", addTodosAsString); // `${todoID}`
-  // ############# LOCAL STORAGE END #######################
+// ### POST per KEYPRESS New Todos ###
+function addTodoOnEnter(e) {
+  if (e.key.toLowerCase() === "enter") {
+    addTodo();
+  }
+}
+todoInput.addEventListener("keypress", addTodoOnEnter);
+
+// ### POST per BUTTON New Todos ###
+function addTodo() {
+  const newTodoText = todoInput.value;
+  todoInput.value = "";
+  todoTemplate(newTodoText);
+
+  // FETCH -> POST
+  const newTodo = {
+    description: newTodoText,
+    done: false,
+  };
+  fetch(fetchAdress, {
+    method: "POST",
+    headers: { "Content-type": "application/json" },
+    body: JSON.stringify(newTodo),
+  })
+    .then((response) => response.json())
+    .then((newTodoFromApi) => {
+      console.log(newTodoFromApi);
+    });
 }
 addButton.addEventListener("click", addTodo);
-// ### ADD ENDE ############################################
 
-// #########################################################
-// ### UPDATE STATE (aus LocalStorage) #####################
-function loadDataFromLocalStorage() {
-  if (localStorage.getItem("todos")) {
-    const todosData = JSON.parse(localStorage.getItem("todos"));
-    return todosData;
-  } else {
-    return [];
-  }
+let data;
+function getData() {
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      data = todosFromApi;
+      console.log(data);
+      return data;
+    });
 }
-state.todos = loadDataFromLocalStorage();
-console.log("GET: ", state.todos);
+getData();
+console.log("Hier: ", data);
 
-// #########################################################
-// ### UPDATE DONE #########################################
+// ### PUT Checked = Done:TRUE ###
 function isChecked(e) {
-  // li innertext
-  let datisit = e.target.parentElement.innerText;
-  let updateTodosAsString = JSON.stringify(state.todos);
-  if (e.target.checked) {
-    e.target.parentElement.style.textDecoration = "line-through";
-    // state update
-    for (let datauch of state.todos) {
-      if (datisit === datauch.todo) {
-        datauch.done = "true";
-        updateTodosAsString = JSON.stringify(state.todos);
+  let updatedTodo = {};
+  let newFetchAdress;
+
+  // FETCH GET
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      if (e.target.checked) {
+        for (let todo of todosFromApi) {
+          if (todo.description === e.target.parentElement.innerText) {
+            updatedTodo.id = todo.id;
+            newFetchAdress = fetchAdress + "/" + todo.id;
+            updatedTodo.description = todo.description;
+            updatedTodo.done = true;
+
+            // FETCH -> PUT
+            fetch(newFetchAdress, {
+              method: "PUT",
+              headers: { "Content-type": "application/json" },
+              body: JSON.stringify(updatedTodo),
+            })
+              .then((response) => response.json())
+              .then((updatedTodoFromApi) => {});
+          }
+        }
+      } else {
+        for (let todo of todosFromApi) {
+          // 2. Fetch-Daten mit li-Daten abgleichen
+          if (todo.description === e.target.parentElement.innerText) {
+            updatedTodo.id = todo.id;
+            newFetchAdress = fetchAdress + "/" + todo.id;
+            updatedTodo.description = todo.description;
+            updatedTodo.done = false;
+
+            // FETCH -> PUT
+            fetch(newFetchAdress, {
+              method: "PUT",
+              headers: { "Content-type": "application/json" },
+              body: JSON.stringify(updatedTodo),
+            })
+              .then((response) => response.json())
+              .then((updatedTodoFromApi) => {});
+          }
+        }
       }
-    }
-  } else {
-    e.target.parentElement.style.textDecoration = "none";
-    // state update
-    for (let datauch of state.todos) {
-      if (datisit === datauch.todo) {
-        datauch.done = "false";
-        updateTodosAsString = JSON.stringify(state.todos);
-      }
-    }
-  }
-  localStorage.clear();
-  localStorage.setItem("todos", updateTodosAsString);
+    }); // FETCH GET ENDE
 }
 todoList.addEventListener("change", isChecked);
 
-// REMOVE DONE TODOS
+// ### REMOVE DONE TODOS ###
 function removeDoneTodos() {
-  // li display none
-  // document.querySelector("#todo-list").innerHTML = "";
-  const children = todoList.children;
-  const length = children.length - 1;
-  for (let i = length; i >= 0; i--) {
-    const li = children[i];
-    const checkbox = li.querySelector('input[type="checkbox"]');
-    const isChecked = checkbox.checked;
-    if (isChecked === true) {
-      li.remove();
-    }
-  }
-  // state done todo löschen
-  let deletedTodosString = JSON.stringify(state.todos);
-  for (let i = state.todos.length - 1; i >= 0; i--) {
-    if (state.todos[i].done === "true") {
-      state.todos.splice(i, 1);
-    }
-  }
-  deletedTodosString = JSON.stringify(state.todos);
-  localStorage.clear();
-  localStorage.setItem("todos", deletedTodosString);
+  let newFetchAdress;
+  // Fetch GET
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      for (let todo of todosFromApi) {
+        if (todo.done === true) {
+          newFetchAdress = fetchAdress + "/" + todo.id;
+          // FETCH DELETE
+          fetch(newFetchAdress, {
+            method: "DELETE",
+          })
+            .then((response) => response.json())
+            .then(() => {});
+          // FETCH DELETE ENDE
+        }
+      }
+    });
+  // Fetch GET ENDE
+  showOpenTodos();
 }
 deleteButton.addEventListener("click", removeDoneTodos);
 
-// #####################################################
-// FILTER
+// ### FILTER ###
 function filterTodos(e) {
   switch (e.target.value) {
     case "all":
@@ -150,59 +176,40 @@ function filterTodos(e) {
 }
 radioContainer.addEventListener("change", filterTodos);
 
-// Filter - ALL
+// ### Filter - ALL
 function showAllTodos() {
   todoList.innerHTML = "";
-  for (let openTodo of state.todos) {
-    filterlist(openTodo.todo, openTodo.done);
-  }
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      for (let todo of todosFromApi) {
+        todoTemplate(todo.description, todo.done);
+      }
+    });
 }
-
-// FILTER-LISTE bauen
-function filterlist(value, done) {
-  const TodoText = value;
-
-  // Elemente holen
-  const newTodoLi = document.createElement("li");
-  const checkBox = document.createElement("input");
-  const cboxLabel = document.createElement("label");
-
-  // li stylen
-  newTodoLi.setAttribute("class", "todo-item");
-  if (done === "true") {
-    newTodoLi.style.textDecoration = "line-through";
-    checkBox.checked = "true";
-  }
-  // checkbox stylen
-  checkBox.type = "checkbox";
-  checkBox.setAttribute("type", "checkbox");
-  checkBox.setAttribute("class", "todo-item__checkbox");
-  // label stylen
-  cboxLabel.setAttribute("class", "todo-item__text");
-
-  // zusammenbauen:
-  newTodoLi.appendChild(checkBox);
-  cboxLabel.innerText = TodoText;
-  newTodoLi.appendChild(cboxLabel);
-  todoList.appendChild(newTodoLi);
-  return;
-}
-
-// Filter - OPEN
+// ### Filter - OPEN
 function showOpenTodos() {
   todoList.innerHTML = "";
-  for (let openTodo of state.todos) {
-    if (openTodo.done === "false") {
-      filterlist(openTodo.todo, openTodo.done);
-    }
-  }
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      for (let openTodo of todosFromApi) {
+        if (openTodo.done === false) {
+          todoTemplate(openTodo.description, openTodo.done);
+        }
+      }
+    });
 }
-// Filter - DONE
+// ### Filter - DONE
 function showDoneTodos() {
   todoList.innerHTML = "";
-  for (let openTodo of state.todos) {
-    if (openTodo.done === "true") {
-      filterlist(openTodo.todo, openTodo.done);
-    }
-  }
+  fetch(fetchAdress)
+    .then((res) => res.json())
+    .then((todosFromApi) => {
+      for (let openTodo of todosFromApi) {
+        if (openTodo.done === true) {
+          todoTemplate(openTodo.description, openTodo.done);
+        }
+      }
+    });
 }
