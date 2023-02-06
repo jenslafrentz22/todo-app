@@ -3,22 +3,15 @@ const deleteButton = document.querySelector("#delete-button");
 const todoInput = document.querySelector("#todo-input");
 const todoList = document.querySelector("#todo-list");
 const radioContainer = document.querySelector("#radio-container");
-
-// ### FETCH - ADRESSE ###
 const fetchAdress = "http://localhost:4730/todos";
-
-// State beim Seitenstart rendern
-function render() {
-  showAllTodos();
-}
+let data; // State
+showAllTodos();
 
 // ### TODO-TEMPLATE ###
 function todoTemplate(descText, isDone) {
-  // Elemente holen
   const newTodoLi = document.createElement("li");
   const checkBox = document.createElement("input");
   const cboxLabel = document.createElement("label");
-
   // li stylen
   newTodoLi.setAttribute("class", "todo-item");
   if (isDone === true) {
@@ -31,13 +24,11 @@ function todoTemplate(descText, isDone) {
   checkBox.setAttribute("class", "todo-item__checkbox");
   // label stylen
   cboxLabel.setAttribute("class", "todo-item__text");
-
   // zusammenbauen:
   newTodoLi.appendChild(checkBox);
   cboxLabel.innerText = descText;
   newTodoLi.appendChild(cboxLabel);
   todoList.appendChild(newTodoLi);
-  console.log(todoList);
 }
 
 // ### POST per KEYPRESS New Todos ###
@@ -53,7 +44,6 @@ function addTodo() {
   const newTodoText = todoInput.value;
   todoInput.value = "";
   todoTemplate(newTodoText);
-
   // FETCH -> POST
   const newTodo = {
     description: newTodoText,
@@ -65,98 +55,50 @@ function addTodo() {
     body: JSON.stringify(newTodo),
   })
     .then((response) => response.json())
-    .then((newTodoFromApi) => {
-      console.log(newTodoFromApi);
-    });
+    .then((newTodoFromApi) => {});
 }
 addButton.addEventListener("click", addTodo);
 
-let data;
-function getData() {
-  fetch(fetchAdress)
-    .then((res) => res.json())
-    .then((todosFromApi) => {
-      data = todosFromApi;
-      console.log(data);
-      return data;
-    });
-}
-getData();
-console.log("Hier: ", data);
-
 // ### PUT Checked = Done:TRUE ###
 function isChecked(e) {
-  let updatedTodo = {};
   let newFetchAdress;
+  for (let updatedTodo of data) {
+    newFetchAdress = fetchAdress + "/" + updatedTodo.id;
 
-  // FETCH GET
-  fetch(fetchAdress)
-    .then((res) => res.json())
-    .then((todosFromApi) => {
+    if (updatedTodo.description === e.target.parentElement.innerText) {
       if (e.target.checked) {
-        for (let todo of todosFromApi) {
-          if (todo.description === e.target.parentElement.innerText) {
-            updatedTodo.id = todo.id;
-            newFetchAdress = fetchAdress + "/" + todo.id;
-            updatedTodo.description = todo.description;
-            updatedTodo.done = true;
-
-            // FETCH -> PUT
-            fetch(newFetchAdress, {
-              method: "PUT",
-              headers: { "Content-type": "application/json" },
-              body: JSON.stringify(updatedTodo),
-            })
-              .then((response) => response.json())
-              .then((updatedTodoFromApi) => {});
-          }
-        }
+        updatedTodo.done = true;
       } else {
-        for (let todo of todosFromApi) {
-          // 2. Fetch-Daten mit li-Daten abgleichen
-          if (todo.description === e.target.parentElement.innerText) {
-            updatedTodo.id = todo.id;
-            newFetchAdress = fetchAdress + "/" + todo.id;
-            updatedTodo.description = todo.description;
-            updatedTodo.done = false;
-
-            // FETCH -> PUT
-            fetch(newFetchAdress, {
-              method: "PUT",
-              headers: { "Content-type": "application/json" },
-              body: JSON.stringify(updatedTodo),
-            })
-              .then((response) => response.json())
-              .then((updatedTodoFromApi) => {});
-          }
-        }
+        updatedTodo.done = false;
       }
-    }); // FETCH GET ENDE
+      // FETCH -> PUT
+      fetch(newFetchAdress, {
+        method: "PUT",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(updatedTodo),
+      })
+        .then((response) => response.json())
+        .then((updatedTodoFromApi) => {});
+    }
+  }
 }
 todoList.addEventListener("change", isChecked);
 
 // ### REMOVE DONE TODOS ###
 function removeDoneTodos() {
   let newFetchAdress;
-  // Fetch GET
-  fetch(fetchAdress)
-    .then((res) => res.json())
-    .then((todosFromApi) => {
-      for (let todo of todosFromApi) {
-        if (todo.done === true) {
-          newFetchAdress = fetchAdress + "/" + todo.id;
-          // FETCH DELETE
-          fetch(newFetchAdress, {
-            method: "DELETE",
-          })
-            .then((response) => response.json())
-            .then(() => {});
-          // FETCH DELETE ENDE
-        }
-      }
-    });
-  // Fetch GET ENDE
-  showOpenTodos();
+  for (let todo of data) {
+    if (todo.done === true) {
+      newFetchAdress = fetchAdress + "/" + todo.id;
+      // FETCH DELETE
+      fetch(newFetchAdress, {
+        method: "DELETE",
+      })
+        .then((response) => response.json())
+        .then(() => {});
+      // FETCH DELETE ENDE
+    }
+  }
 }
 deleteButton.addEventListener("click", removeDoneTodos);
 
@@ -185,31 +127,24 @@ function showAllTodos() {
       for (let todo of todosFromApi) {
         todoTemplate(todo.description, todo.done);
       }
+      data = todosFromApi;
     });
 }
 // ### Filter - OPEN
 function showOpenTodos() {
   todoList.innerHTML = "";
-  fetch(fetchAdress)
-    .then((res) => res.json())
-    .then((todosFromApi) => {
-      for (let openTodo of todosFromApi) {
-        if (openTodo.done === false) {
-          todoTemplate(openTodo.description, openTodo.done);
-        }
-      }
-    });
+  for (let openTodo of data) {
+    if (openTodo.done === false) {
+      todoTemplate(openTodo.description, openTodo.done);
+    }
+  }
 }
 // ### Filter - DONE
 function showDoneTodos() {
   todoList.innerHTML = "";
-  fetch(fetchAdress)
-    .then((res) => res.json())
-    .then((todosFromApi) => {
-      for (let openTodo of todosFromApi) {
-        if (openTodo.done === true) {
-          todoTemplate(openTodo.description, openTodo.done);
-        }
-      }
-    });
+  for (let openTodo of data) {
+    if (openTodo.done === true) {
+      todoTemplate(openTodo.description, openTodo.done);
+    }
+  }
 }
